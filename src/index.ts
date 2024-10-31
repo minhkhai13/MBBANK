@@ -1,11 +1,22 @@
-import express, { Request, Response, NextFunction } from "express";
+import express, { Request, Response } from "express";
 import MB from "./MB"; // Assuming MB is properly typed
 
-(async () => {
-    const mb = new MB({ username: "0857300073", password: "Conmeongungoc123@@" });
-    await mb.getTransactionsHistory({
-      accountNumber: "0857300073",
-      fromDate: "20/08/2024",
-      toDate: "23/08/2024",
-    });
-  })();
+const app = express();
+const port = process.env.PORT || 3009;
+app.use(express.json());
+
+app.post("/get-transaction-history", async (req: Request, res: Response) => {
+  const { username, password, accountNumber, fromDate, toDate } = req.body;
+
+  const mb = new MB({ username: username, password: password });
+  const data = await mb.getTransactionsHistory({
+    accountNumber: accountNumber,
+    fromDate: fromDate,
+    toDate: toDate,
+  });
+  res.send(data);
+});
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});

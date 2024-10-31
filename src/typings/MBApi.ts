@@ -13,23 +13,12 @@ export interface BalanceList {
 }
 
 export interface TransactionInfo {
-  postingDate: string;
-  transactionDate: string;
-  accountNo: string;
-  creditAmount: string;
-  debitAmount: string;
-  currency: string;
-  description: string;
-  addDescription: string;
-  availableBalance: string;
-  beneficiaryAccount: string;
-  refNo: string;
-  benAccountName: string;
-  bankName: string;
-  benAccountNo: string;
-  dueDate: string;
-  docId: string;
-  transactionType: string;
-  pos: string;
-  tracingType: string;
+  
+  amount: number;
+
+  content: string;
+
+  accountName: string;
+
+  accountNumber: string;
 }

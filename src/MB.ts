@@ -1,15 +1,21 @@
-import { createHash } from 'node:crypto';
+import { createHash } from "node:crypto";
 
-import Jimp from 'jimp';
-import moment from 'moment';
-import { recognize } from 'node-tesseract-ocr';
-import replaceColor from 'replace-color';
-import { Client } from 'undici';
+import Jimp from "jimp";
+import moment from "moment";
+import { recognize } from "node-tesseract-ocr";
+import replaceColor from "replace-color";
+import { Client } from "undici";
 
-import { BalanceData, BalanceList, TransactionInfo } from './typings/MBApi';
-import { CaptchaResponse } from './typings/MBLogin';
-import { defaultHeaders, defaultTesseractConfig, FPR, generateDeviceId, getTimeNow } from './utils/Global';
-import wasmEnc from './utils/LoadWasm';
+import { BalanceData, BalanceList, TransactionInfo } from "./typings/MBApi";
+import { CaptchaResponse } from "./typings/MBLogin";
+import {
+  defaultHeaders,
+  defaultTesseractConfig,
+  FPR,
+  generateDeviceId,
+  getTimeNow,
+} from "./utils/Global";
+import wasmEnc from "./utils/LoadWasm";
 
 /**
  * Main client class for all activities.
@@ -42,7 +48,7 @@ export default class MB {
   /**
    * Undici client. Use it for sending the request to API.
    */
-  public client = new Client('https://online.mbbank.com.vn');
+  public client = new Client("https://online.mbbank.com.vn");
 
   /**
    * WASM Buffer, downloaded from MB.
@@ -56,7 +62,10 @@ export default class MB {
    * @param data.password Your MB Bank login password.
    */
   public constructor(data: { username: string; password: string }) {
-    if (!data.username || !data.password) throw new Error('You must define at least a MB account to use with this library!');
+    if (!data.username || !data.password)
+      throw new Error(
+        "You must define at least a MB account to use with this library!"
+      );
 
     this.username = data.username;
     this.password = data.password;
@@ -70,29 +79,30 @@ export default class MB {
     const rId = getTimeNow();
 
     const headers = defaultHeaders as any;
-    headers['X-Request-Id'] = rId;
+    headers["X-Request-Id"] = rId;
 
     const captchaReq = await this.client.request({
-      method: 'POST',
-      path: '/api/retail-web-internetbankingms/getCaptchaImage',
+      method: "POST",
+      path: "/api/retail-web-internetbankingms/getCaptchaImage",
       headers,
       body: JSON.stringify({
-        sessionId: '',
+        sessionId: "",
         refNo: rId,
         deviceIdCommon: this.deviceId,
       }),
     });
 
-    const captchaRes: CaptchaResponse = (await captchaReq.body.json()) as CaptchaResponse;
-    let captchaBuffer = Buffer.from(captchaRes.imageString, 'base64');
+    const captchaRes: CaptchaResponse =
+      (await captchaReq.body.json()) as CaptchaResponse;
+    let captchaBuffer = Buffer.from(captchaRes.imageString, "base64");
 
     // Remove the first line with static hex code
     const captchaImagePRCLine1 = await replaceColor({
       image: captchaBuffer,
       colors: {
-        type: 'hex',
-        targetColor: '#847069',
-        replaceColor: '#ffffff',
+        type: "hex",
+        targetColor: "#847069",
+        replaceColor: "#ffffff",
       },
     });
 
@@ -102,16 +112,21 @@ export default class MB {
     const captchaImagePRCLine2 = await replaceColor({
       image: captchaBuffer,
       colors: {
-        type: 'hex',
-        targetColor: '#ffe3d5',
-        replaceColor: '#ffffff',
+        type: "hex",
+        targetColor: "#ffe3d5",
+        replaceColor: "#ffffff",
       },
     });
 
     captchaBuffer = await captchaImagePRCLine2.getBufferAsync(Jimp.MIME_PNG);
 
     // Get captcha via OCR
-    const captchaContent = (await recognize(captchaBuffer, defaultTesseractConfig)).replaceAll('\n', '').replaceAll(' ', '').slice(0, -1);
+    const captchaContent = (
+      await recognize(captchaBuffer, defaultTesseractConfig)
+    )
+      .replaceAll("\n", "")
+      .replaceAll(" ", "")
+      .slice(0, -1);
 
     // Check valid captcha by normal rule-base
     if (captchaContent.length !== 6 || !/^[a-z0-9]+$/i.test(captchaContent)) {
@@ -121,8 +136,8 @@ export default class MB {
     // wasm
     if (!this.wasmData) {
       const wasm = await this.client.request({
-        method: 'GET',
-        path: '/assets/wasm/main.wasm',
+        method: "GET",
+        path: "/assets/wasm/main.wasm",
         headers: defaultHeaders,
       });
       this.wasmData = Buffer.from(await wasm.body.arrayBuffer());
@@ -131,7 +146,7 @@ export default class MB {
     // Create Data
     const requestData = {
       userId: this.username,
-      password: createHash('md5').update(this.password).digest('hex'),
+      password: createHash("md5").update(this.password).digest("hex"),
       captcha: captchaContent,
       ibAuthen2faString: FPR,
       sessionId: null,
@@ -140,28 +155,33 @@ export default class MB {
     };
 
     const loginReq = await this.client.request({
-      method: 'POST',
-      path: '/api/retail_web/internetbanking/v2.0/doLogin',
+      method: "POST",
+      path: "/api/retail_web/internetbanking/v2.0/doLogin",
       headers: defaultHeaders,
       body: JSON.stringify({
-        dataEnc: await wasmEnc(this.wasmData, requestData, '0'),
+        dataEnc: await wasmEnc(this.wasmData, requestData, "0"),
       }),
     });
 
     const loginRes = (await loginReq.body.json()) as any;
 
     if (!loginRes.result) {
-      throw new Error('Login failed: Unknown data');
+      throw new Error("Login failed: Unknown data");
     }
 
     if (loginRes.result.ok) {
       this.sessionId = loginRes.sessionId;
       return true;
-    } else if (loginRes.result.responseCode === 'GW283') {
+    } else if (loginRes.result.responseCode === "GW283") {
       // Again...
       return this.login();
     } else {
-      const e = new Error('Login failed: (' + loginRes.result.responseCode + '): ' + loginRes.result.message) as any;
+      const e = new Error(
+        "Login failed: (" +
+          loginRes.result.responseCode +
+          "): " +
+          loginRes.result.message
+      ) as any;
       e.code = loginRes.result.responseCode;
       throw e;
     }
@@ -175,7 +195,11 @@ export default class MB {
     return `${this.username}-${getTimeNow()}`;
   }
 
-  private async mbRequest(data: { path: string; json?: object; headers?: object }): Promise<any> {
+  private async mbRequest(data: {
+    path: string;
+    json?: object;
+    headers?: object;
+  }): Promise<any> {
     if (!this.sessionId) {
       await this.login();
     }
@@ -183,8 +207,8 @@ export default class MB {
     const rId = this.getRefNo();
 
     const headers = defaultHeaders as any;
-    headers['X-Request-Id'] = rId;
-    (headers['Deviceid'] = this.deviceId), (headers['Refno'] = rId);
+    headers["X-Request-Id"] = rId;
+    (headers["Deviceid"] = this.deviceId), (headers["Refno"] = rId);
 
     const defaultBody = {
       sessionId: this.sessionId,
@@ -194,7 +218,7 @@ export default class MB {
     const body = Object.assign(defaultBody, data.json);
 
     const httpReq = await this.client.request({
-      method: 'POST',
+      method: "POST",
       path: data.path,
       headers,
       body: JSON.stringify(body),
@@ -205,11 +229,16 @@ export default class MB {
     if (!httpRes || !httpRes.result) {
       return false;
     } else if (httpRes.result.ok == true) return httpRes;
-    else if (httpRes.result.responseCode === 'GW200') {
+    else if (httpRes.result.responseCode === "GW200") {
       await this.login();
       return this.mbRequest(data);
     } else {
-      throw new Error('Request failed (' + httpRes.result.responseCode + '): ' + httpRes.result.message);
+      throw new Error(
+        "Request failed (" +
+          httpRes.result.responseCode +
+          "): " +
+          httpRes.result.message
+      );
     }
   }
 
@@ -219,7 +248,7 @@ export default class MB {
    */
   public async getBalance(): Promise<BalanceList | undefined> {
     const balanceData = await this.mbRequest({
-      path: '/api/retail-web-accountms/getBalance',
+      path: "/api/retail-web-accountms/getBalance",
     });
 
     if (!balanceData) return;
@@ -275,19 +304,35 @@ export default class MB {
    * <MB>.getTransactionsHistory({ accountNumber: "1234567890", fromDate: "1/12/2023", toDate: "1/1/2024" });
    * ```
    */
-  public async getTransactionsHistory(data: { accountNumber: string; fromDate: string; toDate: string }): Promise<TransactionInfo[] | undefined> {
-    if (moment().day() - moment(data.fromDate, 'D/M/YYYY').day() > 90 || moment().day() - moment(data.fromDate, 'D/M/YYYY').day() > 90)
-      throw new Error('Date formatting error: Max transaction history must be shorter than 90 days!');
-    if (moment(data.fromDate, 'DD/MM/YYYY').day() - moment(data.toDate, 'D/M/YYYY').day() > 90) throw new Error('Date formatting error: Max transaction history must be shorter than 90 days!');
+  public async getTransactionsHistory(data: {
+    accountNumber: string;
+    fromDate: string;
+    toDate: string;
+  }): Promise<TransactionInfo[] | undefined> {
+    if (
+      moment().day() - moment(data.fromDate, "D/M/YYYY").day() > 90 ||
+      moment().day() - moment(data.fromDate, "D/M/YYYY").day() > 90
+    )
+      throw new Error(
+        "Date formatting error: Max transaction history must be shorter than 90 days!"
+      );
+    if (
+      moment(data.fromDate, "DD/MM/YYYY").day() -
+        moment(data.toDate, "D/M/YYYY").day() >
+      90
+    )
+      throw new Error(
+        "Date formatting error: Max transaction history must be shorter than 90 days!"
+      );
 
     const body = {
       accountNo: data.accountNumber,
-      fromDate: moment(data.fromDate, 'D/M/YYYY').format('DD/MM/YYYY'),
-      toDate: moment(data.toDate, 'D/M/YYYY').format('DD/MM/YYYY'),
+      fromDate: moment(data.fromDate, "D/M/YYYY").format("DD/MM/YYYY"),
+      toDate: moment(data.toDate, "D/M/YYYY").format("DD/MM/YYYY"),
     };
 
     const historyData = await this.mbRequest({
-      path: '/api/retail-transactionms/transactionms/get-account-transaction-history',
+      path: "/api/retail-transactionms/transactionms/get-account-transaction-history",
       json: body,
     });
 
@@ -298,28 +343,12 @@ export default class MB {
     historyData.transactionHistoryList.forEach((transactionRaw: unknown) => {
       const transaction = transactionRaw as any;
 
-      console.log(transaction);
-
+      const content = transaction.addDescription.split(" - ")[0];
       const transactionData: TransactionInfo = {
-        postingDate: transaction.postingDate,
-        transactionDate: transaction.transactionDate,
-        accountNo: transaction.accountNo,
-        creditAmount: transaction.creditAmount,
-        debitAmount: transaction.debitAmount,
-        currency: transaction.currency,
-        description: transaction.description,
-        addDescription: transaction.addDescription,
-        availableBalance: transaction.availableBalance,
-        beneficiaryAccount: transaction.beneficiaryAccount,
-        refNo: transaction.refNo,
-        benAccountName: transaction.benAccountName,
-        bankName: transaction.bankName,
-        benAccountNo: transaction.benAccountNo,
-        dueDate: transaction.dueDate,
-        docId: transaction.docId,
-        transactionType: transaction.transactionType,
-        pos: transaction.pos,
-        tracingType: transaction.tracingType,
+        amount: transaction.debitAmount,
+        content: content,
+        accountName: transaction.benAccountName,
+        accountNumber: transaction.benAccountNo,
       };
       transactionHistories.push(transactionData);
     });
