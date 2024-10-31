@@ -342,8 +342,9 @@ export default class MB {
 
     historyData.transactionHistoryList.forEach((transactionRaw: unknown) => {
       const transaction = transactionRaw as any;
+      console.log(transaction);
       if (transaction.debitAmount > 0) {
-        const content = transaction.addDescription.split("- ")[0];
+        const content = transaction.addDescription.split(" ")[0];
         const transactionData: TransactionInfo = {
           amount: transaction.debitAmount,
           content: content,
