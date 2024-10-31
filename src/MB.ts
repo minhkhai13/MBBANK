@@ -342,15 +342,16 @@ export default class MB {
 
     historyData.transactionHistoryList.forEach((transactionRaw: unknown) => {
       const transaction = transactionRaw as any;
-
-      const content = transaction.addDescription.split(" - ")[0];
-      const transactionData: TransactionInfo = {
-        amount: transaction.debitAmount,
-        content: content,
-        accountName: transaction.benAccountName,
-        accountNumber: transaction.benAccountNo,
-      };
-      transactionHistories.push(transactionData);
+      if (transaction.debitAmount > 0) {
+        const content = transaction.addDescription.split("- ")[0];
+        const transactionData: TransactionInfo = {
+          amount: transaction.debitAmount,
+          content: content,
+          accountName: transaction.benAccountName,
+          accountNumber: transaction.benAccountNo,
+        };
+        transactionHistories.push(transactionData);
+      }
     });
 
     return transactionHistories;
