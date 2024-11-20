@@ -342,14 +342,28 @@ export default class MB {
 
     historyData.transactionHistoryList.forEach((transactionRaw: unknown) => {
       const transaction = transactionRaw as any;
-      console.log(transaction);
-      if (transaction.debitAmount > 0) {
-        const content = transaction.addDescription.split(" ")[0];
+      // console.log(transaction);
+      const transactionDate = moment(
+        transaction.transactionDate,
+        "DD/MM/YYYY HH:mm:ss"
+      ).toDate();
+
+      // Lấy thời gian hiện tại
+      const now = new Date();
+      // Trừ đi 1.5 giờ (1.5 * 60 * 60 * 1000 milliseconds)
+      const timeThreshold = new Date(
+        now.getTime() - 1 * 60 * 60 * 1000 - 1 * 60 * 1000
+      );
+      // So sánh `transactionDate` với `timeThreshold`
+      if (transaction.debitAmount > 0 && transactionDate > timeThreshold) {
+        console.log(transaction);
+        const content = transaction.addDescription.split(" -")[0];
         const transactionData: TransactionInfo = {
           amount: transaction.debitAmount,
           content: content,
           accountName: transaction.benAccountName,
           accountNumber: transaction.benAccountNo,
+          time_transfer: transaction.transactionDate,
         };
         transactionHistories.push(transactionData);
       }

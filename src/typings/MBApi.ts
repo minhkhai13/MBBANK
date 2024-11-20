@@ -13,7 +13,6 @@ export interface BalanceList {
 }
 
 export interface TransactionInfo {
-  
   amount: number;
 
   content: string;
@@ -21,4 +20,6 @@ export interface TransactionInfo {
   accountName: string;
 
   accountNumber: string;
+
+  time_transfer: string;
 }
