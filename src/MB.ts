@@ -357,7 +357,8 @@ export default class MB {
       // So sánh `transactionDate` với `timeThreshold`
       if (transaction.debitAmount > 0 && transactionDate > timeThreshold) {
         console.log(transaction);
-        const content = transaction.addDescription.split(" -")[0];
+        let content = transaction.addDescription.split("-")[0];
+        content = content.replace(" ", "");
         const transactionData: TransactionInfo = {
           amount: transaction.debitAmount,
           content: content,
